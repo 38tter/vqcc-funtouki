@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="量子回路コンペの試行錯誤と日々の記録。公開回路の検証、自前の改良、失敗から分かったことをまとめています。">
+<title>量子回路コンペ奮闘記</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Sans+JP:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F5F6F8; --paper:#FFFFFF; --ink:#1A2130; --muted:#5B6476; --line:#D9DDE5;
+  --q:#2E57D6; --q-soft:#E3E9FB; --tof:#C9711E; --tof-soft:#F8EADB;
+  --good:#23845A; --bad:#B8443B; --pub:#8A93A6;
+  --display:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+  --body:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11151D; --paper:#181E29; --ink:#E6EAF2; --muted:#9AA3B5; --line:#2C3445;
+    --q:#7D9CFF; --q-soft:#1F2A47; --tof:#F0A257; --tof-soft:#3A2A1A;
+    --good:#5CC795; --bad:#EE7B70; --pub:#6E788C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11151D; --paper:#181E29; --ink:#E6EAF2; --muted:#9AA3B5; --line:#2C3445;
+  --q:#7D9CFF; --q-soft:#1F2A47; --tof:#F0A257; --tof-soft:#3A2A1A;
+  --good:#5CC795; --bad:#EE7B70; --pub:#6E788C; color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.85;padding-inline:16px;padding-block:0 64px}
+main{max-width:760px;margin:0 auto}
+header{padding-block:56px 24px;border-bottom:1px solid var(--line)}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--q);text-transform:uppercase}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,44px);line-height:1.25;margin:8px 0 12px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.4;margin:0 0 12px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:700;font-size:18px;margin:24px 0 6px}
+.lede{color:var(--muted);font-size:17px;margin:0}
+section{padding-block:40px;border-bottom:1px solid var(--line)}
+p{margin:0 0 14px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.q{color:var(--q);font-weight:600}.t{color:var(--tof);font-weight:600}
+figure{margin:20px 0 8px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px}
+figcaption{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.6}
+.scroll{overflow-x:auto}
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .mono{font-family:var(--mono)}
+.note{background:var(--q-soft);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:15px}
+.note b{font-family:var(--display)}
+.term{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:12px 0;font-size:15px}
+.term dt{font-family:var(--mono);font-weight:600;color:var(--q)}
+.term dd{margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:16px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.7}
+.card h4{font-family:var(--display);margin:0 0 4px;font-size:16px}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 8px;border-radius:99px;margin-bottom:6px}
+.tag.ok{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.ng{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.tag.mid{background:var(--tof-soft);color:var(--tof)}
+ul{padding-left:1.3em;margin:0 0 14px}
+.day{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:4px 18px 6px;margin-top:16px}
+.day h3{margin-top:14px}
+.day li{font-size:15px}
+li{margin-bottom:6px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">Kaggle · Verifiable Quantum Circuit Compilation</div>
+  <h1>量子回路を「安く」作るコンペで、これまでやったこと</h1>
+  <p class="lede">量子コンピュータの予備知識がなくても読めるように、図を使いながら順に説明します。中心は invsqrt 課題です。ゼロから作った回路を約 12 倍、公開回路の取り込みと改良を合わせて約 26.4 倍まで安くした道のりをたどります。末尾の「日々の記録」に、毎日の動きを書き足していきます。</p>
+  <p class="lede" style="font-size:13px;margin-top:8px">最終更新 2026-11-14 朝（確定 LB 27.28734、手元の invsqrt 78,765・Q 46、×26.4。朝の改善分は未提出）</p>
+</header>
+
+<section>
+  <h2>そもそも何を競っているのか</h2>
+  <p>Google Quantum AI が出した 3 つの計算（課題）を、量子回路として<strong>できるだけ安く</strong>組むコンペです。「安い」とは主に次の 2 つが少ないことを指します。</p>
+  <dl class="term">
+    <dt class="q">qubit 数 Q</dt><dd>回路が同時に使う量子ビットの本数です。実機では qubit が貴重なので、少ないほど良くなります。</dd>
+    <dt class="t">Toffoli 数 C</dt><dd>「2 つの入力が両方 1 のときだけ出力を反転する」ゲート（AND に相当）の数です。量子計算機では飛び抜けて高価な操作なので、コストの目安として数えます。細かい回転ゲートも Toffoli 何個分かに換算して足します。</dd>
+  </dl>
+  <p>課題ごとに「ベースラインの回路より何倍安いか」を計算し、3 つの倍率の幾何平均が順位表（LB）の点数になります。どれか 1 課題を 8 倍良くすると、LB は 8<sup>1/3</sup> = 2 倍になります。</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 700 200" width="100%" style="min-width:560px" role="img" aria-label="3 つの課題の倍率を幾何平均して LB になる図">
+      <g font-size="14">
+        <rect x="10" y="20" width="170" height="44" rx="8" fill="var(--q-soft)"/>
+        <text x="95" y="47" text-anchor="middle" font-weight="600">I. invsqrt（核融合）</text>
+        <rect x="10" y="78" width="170" height="44" rx="8" fill="var(--q-soft)"/>
+        <text x="95" y="105" text-anchor="middle" font-weight="600">II. dqi（誤り訂正符号）</text>
+        <rect x="10" y="136" width="170" height="44" rx="8" fill="var(--q-soft)"/>
+        <text x="95" y="163" text-anchor="middle" font-weight="600">III. 化学（FeMoCo）</text>
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <path d="M180 42 H250"/><path d="M180 100 H250"/><path d="M180 158 H250"/>
+        </g>
+        <text x="262" y="46" class="mono" font-size="13">Q × C</text>
+        <text x="262" y="104" class="mono" font-size="13">R × Q² × T</text>
+        <text x="262" y="162" class="mono" font-size="13">λ × T × Q</text>
+        <text x="262" y="14" font-size="12" fill="var(--muted)" style="fill:var(--muted)">課題ごとのコスト式</text>
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <path d="M375 42 H420 V100 H460"/><path d="M375 100 H460"/><path d="M375 158 H420 V100"/>
+        </g>
+        <rect x="460" y="70" width="120" height="60" rx="8" fill="var(--paper)" stroke="var(--q)" stroke-width="1.5"/>
+        <text x="520" y="96" text-anchor="middle" font-size="13">各倍率の</text>
+        <text x="520" y="115" text-anchor="middle" font-size="13" font-weight="600">幾何平均</text>
+        <path d="M580 100 H620" stroke="var(--muted)" stroke-width="1.5"/>
+        <text x="630" y="105" font-family="var(--display)" font-weight="900" font-size="22" style="fill:var(--q)">LB</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>倍率 = ベースラインのコスト ÷ 自分のコスト。コストは小さいほど良く、倍率は大きいほど良くなります。</figcaption>
+  </figure>
+  <div class="note"><b>「検証できる」がミソ。</b>提出した回路は、運営の verifier（検証プログラム）が古典シミュレーションで正しさを確かめます。invsqrt は全入力、dqi などは定められた入力と測定結果のサンプルで調べます。間違った回路は 0 点です。手元でも同じ verifier を動かせるので、提出前に必ず PASS を確認しています。</div>
+</section>
+
+<section>
+  <h2>invsqrt 課題：何を計算する回路か</h2>
+  <p class="note">以下の「表 + 二次式」はゼロから作った回路の説明です。現在採用している公開 Q46 版は、平方根と割り算を少しずつ計算する別の方式です。</p>
+  <p>22 bit の整数 x を受け取り、x 自体は変えずに、量子状態に「位相」<span class="num">e<sup>2πi/√x</sup></span> だけを付けます。位相は「回転の角度」のようなもので、測定しても直接は見えません。その角度に 1/√x を書き込む、という課題です。</p>
+  <p>量子回路には特有のルールがあります。<strong>計算の途中で使った作業用 qubit は、最後に必ず 0 に戻す</strong>（逆計算する）必要があります。散らかしたままだと、位相がきれいに付きません。そのため回路全体は「計算 → 位相を付ける → 同じ計算を逆向きにたどる」という往復の形になります。</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 720 230" width="100%" style="min-width:620px" role="img" aria-label="invsqrt 回路の処理の流れ">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="var(--muted)"/></marker></defs>
+      <g font-size="13">
+        <text x="10" y="18" font-weight="600" style="fill:var(--muted)">行き（計算）</text>
+        <g>
+          <rect x="10" y="30" width="118" height="62" rx="8" fill="var(--q-soft)"/>
+          <text x="69" y="56" text-anchor="middle" font-weight="600">① 正規化</text>
+          <text x="69" y="76" text-anchor="middle" font-size="11.5" style="fill:var(--muted)">x を 4ᵏ 倍して桁を揃える</text>
+          <rect x="146" y="30" width="118" height="62" rx="8" fill="var(--tof-soft)"/>
+          <text x="205" y="56" text-anchor="middle" font-weight="600">② 表引き QROM</text>
+          <text x="205" y="76" text-anchor="middle" font-size="11.5" style="fill:var(--muted)">区間ごとの係数を読む</text>
+          <rect x="282" y="30" width="118" height="62" rx="8" fill="var(--tof-soft)"/>
+          <text x="341" y="56" text-anchor="middle" font-weight="600">③ 多項式</text>
+          <text x="341" y="76" text-anchor="middle" font-size="11.5" style="fill:var(--muted)">c₀+c₁t+c₂t² を足し算で</text>
+          <rect x="418" y="30" width="118" height="62" rx="8" fill="var(--q-soft)"/>
+          <text x="477" y="56" text-anchor="middle" font-weight="600">④ 逆正規化</text>
+          <text x="477" y="76" text-anchor="middle" font-size="11.5" style="fill:var(--muted)">2ᵏ 倍して元の桁に</text>
+          <rect x="560" y="30" width="150" height="62" rx="8" fill="var(--paper)" stroke="var(--q)" stroke-width="2"/>
+          <text x="635" y="56" text-anchor="middle" font-weight="700" style="fill:var(--q)">⑤ 位相を付ける</text>
+          <text x="635" y="76" text-anchor="middle" font-size="11.5" style="fill:var(--muted)">y の各ビットで回転</text>
+        </g>
+        <g stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)">
+          <line x1="128" y1="61" x2="144" y2="61"/><line x1="264" y1="61" x2="280" y2="61"/>
+          <line x1="400" y1="61" x2="416" y2="61"/><line x1="536" y1="61" x2="558" y2="61"/>
+        </g>
+        <path d="M635 92 V150 H120" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text x="10" y="140" font-weight="600" style="fill:var(--muted)">帰り（逆計算）</text>
+        <rect x="10" y="160" width="526" height="44" rx="8" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="273" y="187" text-anchor="middle">④→③→②→① を逆向きに実行して、作業用 qubit をすべて 0 に戻す</text>
+        <text x="560" y="187" font-size="12" style="fill:var(--muted)">（表の後片付けは</text>
+        <text x="560" y="205" font-size="12" style="fill:var(--muted)">測定を使うと安い）</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>オレンジの段（表引きと多項式）が Toffoli の大半を使います。青の段は主に qubit の置き場所の工夫です。</figcaption>
+  </figure>
+  <h3>なぜ「表 + 多項式」なのか</h3>
+  <p>1/√x を量子回路で直接割り算や平方根として計算すると、非常に高くつきます。そこで x の範囲を小さな区間に切り、区間ごとに「この区間では 1/√x ≈ c₀ + c₁t + c₂t²」という二次式の係数を表にしておきます。回路は「x の上位ビットで表を引く → 下位ビット t で二次式を計算する」だけで済みます。区間を細かくするほど式は簡単になりますが、表は大きくなります。この兼ね合いを探索プログラム（<code>search.py</code>）で決めました。今の設計は 512 区間（a=9）× 二次式です。</p>
+  <div class="note"><b>精度の条件。</b>位相の誤差は全入力で 2⁻²⁴/√x 回転以内でなければなりません。係数の桁数を削るほど回路は安くなりますが、誤差が増えます。そこで、切り捨てまで含めて 1 ビット単位で一致する数値モデルを作り、回路を作る前に全 313 万入力の誤差を確かめています。</div>
+</section>
+
+<section>
+  <h2>Toffoli と Qubit をどう削ぎ落としたか：削減の全工程</h2>
+  <p>invsqrt のスコアは <span class="mono">Q（qubit数）× C（Toffoli換算コスト）</span> で決まります。どちらか片方だけを減らしても良いスコアは出ません。しかも、現在の自前回路（Q=84, C≈2,060）では、<strong>「qubit を 1 本減らす」ことは「Toffoli を約 24 個減らす」のと同等のインパクト</strong>を持ちます。そのため、「Toffoli が少し増えてでも qubit を削る」という大胆なトレードオフが勝利の鍵になります。ベースラインの 208 万点から 17.3 万点（約 12 倍改善）に至る削減の工程は、大きく 5 つのフェーズに分かれます。</p>
+
+  <div class="cards" style="grid-template-columns:1fr;gap:14px;margin-top:20px">
+    <div class="card">
+      <span class="tag ok">工程 1</span>
+      <h4>アルゴリズムの抜本刷新（Toffoli 7,735 → 2,476、Q 260 → 132）</h4>
+      <p>運営のベースラインは 1/√x を直接割り算と平方根で求めており、膨大なゲートを消費していました。これを<strong>「区間ごとの表引き（QROM）＋ 二次多項式近似（Horner 法）」</strong>へと完全に作り替えました。さらに、狭い桁を広い桁に足す際に余分なゲートを使わない自前の Gidney 型加算器や、上位ビットが 0 である性質を生かした降順 CSWAP シフタを導入。Toffoli を一気に 3 分の 1 以下に圧縮しました。</p>
+    </div>
+
+    <div class="card">
+      <span class="tag ok">工程 2</span>
+      <h4>Qubit の「満員電車」を解消する構造改革（Q 132 → 94）</h4>
+      <p>Toffoli が減っても Q=132 ではスコアが伸び悩みます。ピークを押し上げていた係数レジスタと加算器の幅を大胆に削りました。</p>
+      <ul>
+        <li><strong>lo_bits（上下分割）：</strong>多項式の定数項 c₀ は区間内での変化が小さいため、動かない上位を別のレジスタ <span class="mono">Yh</span> に逃がし、加算器が扱うのは下位 21 bit のみに限定。qubit と Toffoli の両方が劇的に減少（Q 102、score 203k）。</li>
+        <li><strong>early_hi（先行位相付与＆即時消去）：</strong>量子回路の位相は「足し算」で重ね合わせられる性質を持ちます。これを利用し、表を引いた直後に Yh の分の位相を先に付け、Yh をその場で消去（unlookup）して多項式計算の間は qubit を解放しました。Toffoli は一時的に 47 個増えましたが、Q が 94 へと 8 本減り、スコアは 19.8 万点へ向上しました。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <span class="tag ok">工程 3</span>
+      <h4>無駄な桁・繰り上がりの切り詰めと線形計画法（Toffoli 1,795 → 1,733、Q 94 → 90）</h4>
+      <p>構造が決まった後は、ビット単位の極限最適化を進めました。</p>
+      <ul>
+        <li><strong>trim（変動しない上位ビットの加算削除）：</strong>313 万全入力の厳密数値シミュレーションを行い、足し算の前後に実際に値が変わりうる最上位桁を特定。絶対に繰り上がりが届かない無駄な桁を加算器から切り落としました（Toffoli −50、score 194k）。</li>
+        <li><strong>windowed adder ＋ borrow_top：</strong>繰り上がりの長い連鎖を途中で区切って測定・後補正する窓付き加算器を導入。さらに、作業領域の最上位 1 本を入力 x の「必ず 0 であるビット」から一時借用し、Z 回転で打ち消すことで Q を 91 へ圧縮（score 190k）。</li>
+        <li><strong>LP（線形計画法）による角度調整：</strong>回転角を 2⁻ᵏ の固定値からわずかに微調整して誤差を打ち消し合わせ、浮いた精度マージンを使って係数 c₁ を 1 bit 削減。Q 90、回転数 45 個を達成（score 184k）。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <span class="tag ok">工程 4</span>
+      <h4>作業領域ゼロの論理合成（XAG）と極限最適化（Q 90 → 84、Toffoli 1,771 → 1,718）</h4>
+      <p>従来の unary 表引きでは作業用 qubit（ancilla）が最低 9 本必要で、Q 90 が物理的な下限になっていました。これを突破するため、公開最良版が使っている<strong>「作業用 qubit を一切使わない論理回路網（XAG）」</strong>の自前合成に乗り出しました。</p>
+      <ul>
+        <li><strong>thick 方式（足場の拡張）：</strong>単純なエシェロン合成では 526 AND と重く unary 版に負けていましたが、出力空間の足場を先回りして厚くする「thick 方式」を考案し、383 AND まで一気に圧縮。Q 84 を実現し、ついに 17.8 万点へ突入。</li>
+        <li><strong>Rust 移植による 12 倍高速化：</strong>合成エンジンを Python から Rust へフルスクラッチ移植。合成時間が 9 分から 45 秒へと 12 倍速くなり、広範なシード探索が可能に。</li>
+        <li><strong>lastu による r-1 積展開の再最適化（最新）：</strong>Rust で得られた論理回路の各出力ビットに対し、SAT/分枝限定法（lastu）で r-1 積展開を再探索。56 出力中 48 出力で AND ゲートを 1 個ずつ削減（計 −48 AND）。Toffoli 平均 1,718 を叩き出し、自前最良となる <strong>173,797（約 12.0 倍改善）</strong> を達成しました。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <span class="tag mid">工程 5（進行中）</span>
+      <h4>ボトルネックの完全解剖と Q 84 → 83 化</h4>
+      <p>Q 84 での qubit 使用ピークを詳細に解析した結果、ボトルネックは「early_hi での一時的な 3 本」と「多項式段 0 の加算器キャリー 11 本」にあることを突き止めました。その後 Q 83 化も試しましたが、後片付けの操作が増えて約 197,736 に悪化しました。この系列の最良は 173,797 のままです。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>スコアの推移</h2>
+  <p>invsqrt のスコアは Q × C です。数値のままでは差が分かりにくいので、下の図では「ベースラインの何倍良くなったか」を棒の長さで表しています。</p>
+  <figure>
+    <div id="bars" class="scroll"></div>
+    <figcaption>倍率 = ベースライン 2,076,774 ÷ 各スコア。すべて公式 verifier の全入力検証で PASS した値です。灰色は公開されている他チームの回路です。確定 LB 27.28734 の提出には公開の64行テーブル版（78,765.50）を使用しました。濃い青は11/14朝に検証した角度調整版（78,765.28、未提出）です。</figcaption>
+  </figure>
+  <h3>効いた工夫（大きい順）</h3>
+  <div class="cards">
+    <div class="card"><span class="tag ok">×3.5</span><h4>表 + 区分二次式</h4>運営のベースラインの方式を、上で説明した「表引き + 二次式」に置き換えました。いちばん大きく効いた変更です。</div>
+    <div class="card"><span class="tag ok">5.96 → 10.2</span><h4>lo_bits（上下分割）</h4>c₀ の上位ビットは区間内でほぼ一定なので、別のレジスタ Yh に置き、足し算は下位 21 bit だけで行います。qubit と Toffoli が同時に減りました。</div>
+    <div class="card"><span class="tag ok">10.2 → 10.4</span><h4>early_hi</h4>Yh の分の位相は、表を引いた直後に先に付けて Yh をすぐ片付けます。位相は足し算なので、分けて付けても結果は同じです。Q が 102 から 94 に減りました。</div>
+    <div class="card"><span class="tag ok">10.4 → 10.7</span><h4>trim</h4>足し算の「繰り上がりの連鎖」を、実際に値が変わりうる桁までに切り詰めました。全入力を数値モデルで調べて、変わらない上位の桁を足し算から外しています。Toffoli が 50 減りました（qubit は減らず）。</div>
+    <div class="card"><span class="tag ok">10.7 → 10.9</span><h4>窓で区切る足し算 + x の空きを借りる</h4>繰り上がりの連鎖を途中で区切り、境目の繰り上がりは測定して消します（補正は後でまとめて入れます）。さらに、作業用の 1 本を入力 x の「必ず 0 の桁」で代用しました。Q が 94 から 91 に減りました。</div>
+    <div class="card"><span class="tag ok">10.9 → 11.2</span><h4>回転角の LP 調整</h4>位相を付ける回転の角度を、2⁻ᵏ ちょうどから少しずらして誤差を打ち消し合わせます（線形計画法）。浮いた誤差の余裕で係数 c₁ を 1 bit 削り、回転も 1 個減らせました。Q 90、score 184,894。</div>
+    <div class="card"><span class="tag ok">11.2 → 11.6</span><h4>論理合成した表引き + Q 84</h4>作業用 qubit なしで表を引く論理回路を自前合成し、足場を厚くする工夫（thick 方式）で AND を 383 個まで圧縮。Yh の先行消去や窓付き足し算と組み合わせ、Q を 90 から 84 に下げて 178,249。</div>
+    <div class="card"><span class="tag ok">11.6 → 12.0</span><h4>r-1 積展開による表引き再最適化</h4>Rust thick 合成の各出力ビットを SAT/分枝限定法（lastu）で再最適化し、56 出力中 48 出力で AND を削減（計 −48 AND）。Toffoli 平均 1,718、この系列の最良 173,797（約 12.0 倍改善）。</div>
+    <div class="card"><span class="tag ok">25.9 → 26.0</span><h4>公開 Q46 版の割り算を細くする</h4>11/13 に公開された Q 46 の回路（80,163）を手元で再現し、割り算の終盤の行を 1 行早く細くして、浮いた誤差を回転角の調整（線形計画法）で吸収しました。Toffoli が平均 17 個減り 79,925。自前の改良として初めて LB に入りました。</div>
+    <div class="card"><span class="tag ok">26.0 → 26.4</span><h4>公開の64行テーブル版へ</h4>Ali Haydar Özdağの改良をAtakanの公開物から取り込み、79,925 → 78,765.50に。11/14朝にはAtakanの回転角調整も検証し、同じ乱数で合成コストが0.07704下がることを確かめました。後者は未提出です。</div>
+    <div class="card"><span class="tag mid">5.8 → 6.0</span><h4>自前の加算器・シフト</h4>Gidney 型の加算器と「上位がゼロ」を利用したシフトで、Toffoli は確実に減りました。ただしスコアへの効きは小さめでした。</div>
+  </div>
+</section>
+
+<section>
+  <h2>いま何がネックか：qubit の「満員電車」</h2>
+  <p>Q は「回路の中で一番混んでいる瞬間に、何本の qubit が同時に使われているか」で決まります。普段は空いていても、1 か所でも混めばそこで Q が決まります。下の図は、回路の頭から終わりまで、作業用 qubit が何本使われているかを追ったものです。</p>
+  <figure>
+    <div id="live" class="scroll"></div>
+    <div class="legend"><span style="--c:var(--q)">自前の回路（Q=94）</span><span style="--c:var(--pub)">公開版（Q=62）</span></div>
+    <figcaption>縦軸は使用中の作業用 qubit の本数で、入力 x の 22 本は含みません。横軸は回路の先頭から末尾までの位置です。ランダムな 1,024 入力でシミュレーションして数えました。</figcaption>
+  </figure>
+  <p>自前の回路は、前半の<strong>表引き（QROM）の区間</strong>で 68 本まで膨らんでいます。表から一度に読み出す係数が 56 bit（c₀ の下位 21 + c₁ 19 + c₂ 8 + Yh 8）もあり、それを全部同時に抱えているためです。公開版はこの区間でも 40 本に収まっています。表を 128 区間程度に小さくし、位相を途中で 2 回に分けて付けることで、同時に抱える量を抑えています。</p>
+  <div class="note"><b>1 qubit は Toffoli 約 24 個分。</b>今の回路（Q=84, C≈2,060）では、qubit を 1 本減らすと Toffoli を約 24 個減らすのと同じだけスコアが良くなります。そのため、Toffoli を少し増やしてでも qubit を減らす工夫が割に合います。early_hi（Q 102→94）や XAG 表引き（Q 90→84）もこの理屈で大きくスコアを伸ばしました。</div>
+</section>
+
+<section>
+  <h2>試したがダメだったこと</h2>
+  <p>失敗も記録しておくと、同じ道を二度歩かずに済みます。</p>
+  <div class="cards">
+    <div class="card"><span class="tag ng">invsqrt</span><h4>split addressing</h4>区間の幅を不揃いにして表を小さくする案です。表は小さくなりましたが、制御付きの表引きが 2 回になり、得をしませんでした。</div>
+    <div class="card"><span class="tag ng">invsqrt</span><h4>旧公開版の微調整</h4>公開回路の回転角の再調整、回転の削減、不要に見えるゲートの削除を試しました。どれも誤差の限界や、まれな測定分岐での破綻で不可でした。その後、全入力と全測定結果を記号的に追う自前の簡約器、「先に測る」書き換えの全数探索、正規化シフタの SAT による再合成も試しましたが、減らせるゲートは 0 個でした。この旧公開版で試した範囲では、局所的な書き換えによる改善は見つかりませんでした。</div>
+    <div class="card"><span class="tag mid">invsqrt</span><h4>初期の合成ルックアップ</h4>作業用 qubit なしの表引きを最初に素直に解いたところ、AND が約 526 個と重く 191,772 で unary 版に及びませんでした（その後の thick 方式で 383 個に圧縮、さらに lastu 最適化で逆転に成功）。</div>
+    <div class="card"><span class="tag ng">invsqrt</span><h4>繰り上がりの連鎖をさらに短く</h4>c₀ の足し算は 21 桁ぜんぶに繰り上がりが届きます。区間の中で c₀ が約 2²⁰ も動くためです。値を低い位置へ寄せる案（上位レジスタが太る）と、小さい項を別レジスタにまとめてから 1 回で足す案（そのレジスタの分だけ qubit が増える）を試しましたが、どちらも qubit が増えてスコアは悪化しました。</div>
+    <div class="card"><span class="tag ng">dqi</span><h4>復号器の作り直し</h4>拡張ユークリッドや可逆 BM 法で作り直しましたが、公開回路のほうがずっと先を行っていました。余地は最大でも 1 割程度です。</div>
+    <div class="card"><span class="tag ng">invsqrt</span><h4>Q46 版の作り変え</h4>表の大きさ（64・256 点）、係数や補正の桁数、割り算の行数、乗算で割り算を置き換える案、qubit を 45 本に減らす案を、精度とコストの両方で見積もりました。その時点の自前の試作では、誤差の上限を超えるかコストが増えました。その後、他チームが64行テーブル版を公開して改善したため、この見積もりは一般的な限界ではありません。割り算の行の置き換え、補正の掛け算の経路変更、位相の回転の削減も、同じく得はありませんでした。</div>
+    <div class="card"><span class="tag ng">dqi</span><h4>まれな失敗の処理と qubit 1 本減</h4>失敗の 8 割を占める「割り切れてしまう段」を回路の中で処理すると Toffoli が 1,500 以上かかり、失敗で失う分（約 690 個分）を上回りました。qubit を 889 → 888 にするのも、混雑する瞬間が 1,142 か所あって割に合いません。</div>
+    <div class="card"><span class="tag ng">化学</span><h4>GPUで学習し直しても回路で逆転</h4>丸める前の誤差は14.28 mHaまで改善しましたが、量子回路向けに丸めると余裕が乏しく、安い表引き回路も再利用できません。通常の表引きでは総操作数が約6%増える見積もりとなり、この方針は中止しました。</div>
+    <div class="card"><span class="tag ng">化学</span><h4>表の縮小</h4>係数を固定したまま表を縮めると、誤差の上限 20 mHa を超えました。丸め前のデータが公開されていないため、再学習もできません。</div>
+  </div>
+</section>
+
+<section>
+  <h2>現在地と次の一手</h2>
+  <ul>
+    <li><strong>確定 LB：27.28734。</strong>11/13に27.029 → 27.04775 → 27.13484 → 27.28734と上昇しました。公開物を課題ごとに組み合わせ、公式の検証を通った改善だけを取り込んだ結果です。順位とメダルの線は動くため、過去の順位を現在値としては扱いません。</li>
+    <li><strong>invsqrt：×26.4、Q 46。</strong>採点済みの回路は78,765.50。11/14朝の回転角調整版は手元で78,765.28ですが、測定の揺れを除いた改善は0.07704です。自前の割り算改良版79,925より良い公開版に切り替えました。</li>
+    <li><strong>化学：295,358,662.46、dqi：約3.6111×10¹¹。</strong>化学は公開された重みの調整を採用。dqiは同じ入力を使った20回の比較で選んだ版を維持しています。手元の期待総合スコア27.26739と確定LBは、dqiの失敗数の揺れにより一致しません。</li>
+    <li><strong>学習し直しは中止。</strong>化学の数値的な精度が上がっても、その値を読み込む回路が高くなれば総コストは悪化します。新しい値にも安い回路を作れる手段が先に必要だと分かりました。</li>
+    <li><strong>次の一手：</strong>公開物の更新確認を続け、別の計算方法や表引きの作り方を探します。朝の改善分は提出ZIPまで準備済みですが、1日5件の提出上限で未受付。11/14 09:00 JST以降に再提出できる状態です。</li>
+  </ul>
+</section>
+
+<section id="log">
+  <h2>日々の記録</h2>
+  <p>その日に何をして、何が分かったかを毎日書き足します。新しい日が上です。</p>
+
+  <article class="day">
+    <h3><time datetime="2026-11-14">11/14（土）</time></h3>
+    <ul>
+      <li><strong>化学の微小改善を採用：</strong>Atakanの重みの合わせ直しを公式検証で確かめ、295,363,118.61 → <strong>295,358,662.46</strong>（約0.00151%減）。読み込む値の重みだけを変え、15本の表引き回路は同じです。</li>
+      <li><strong>回転角だけの改善を切り分け：</strong>invsqrtは33個の回転角だけが変わっていました。全313万入力でPASS。同じ乱数で旧版と比べると高価な操作の実行数は完全一致し、回転を実現するためのコストだけが<strong>0.07704</strong>下がりました。小さな差ほど、測定の揺れと分けて比べる必要があります。</li>
+      <li><strong>提出は日次上限で止まる：</strong>2件を取り込んでZIPを作り、中の18ファイルが検証済みのものと一致することを確認。しかしチームの1日5件の枠を使い切っており、未受付でした。確定LBは<strong>27.28734のまま</strong>。09:00 JST以降に再提出できます。</li>
+      <li><strong>Discussionの新しい数学：</strong>dqiの古い構造向けに、掛け算のブロックを176 → 173操作にする分解が公開されました。全体で546操作減との報告ですが、最新の回路とは構造が違うため、即座に取り込める改善ではありません。</li>
+      <li><strong>化学の再学習からの教訓：</strong>GPUで丸める前の誤差を14.28 mHaまで下げても、通常の丸めでは170 mHaに悪化。段階的な丸めでも上限20 mHa付近で、さらに新しい値の表引き回路は総操作数が約6%増える見積もりでした。安い回路を作り直せる見込みが立たず、この方針は中止しました。</li>
+    </ul>
+  </article>
+
+  <article class="day">
+    <h3><time datetime="2026-11-13">11/13（金）</time></h3>
+    <ul>
+      <li><strong>公開物の入れ替え（未明）：</strong>生成コードごと公開された新しい回路（3 課題とも）を取り込み、LB 25.40 → <strong>27.002</strong>。invsqrt はそれまでの公開最良（Q 62、93,555）から Q 46・80,163 になりました。</li>
+      <li><strong>Q46 版の再現と解読：</strong>公開の生成コードを手元で動かし、同じ回路をビット単位で再現しました（174 秒）。平方根と割り算を 1 bit ずつ計算する方式で、qubit の大半を入力 x 自身の空いた桁に置いていることが分かりました。</li>
+      <li><strong>自前の改良で LB 入り：</strong>割り算の終盤の行を 1 行早く細くし、回転角を線形計画法で合わせ直して 80,163 → <strong>79,925</strong>。最初の提出は、回路ファイルがテキスト形式のまま出ていてエラーになりました（手元の verifier は形式を自動判別するので通っていた）。バイナリにして出し直し、LB <strong>27.029</strong>。提出の前に形式を検査するようにしました。</li>
+      <li><strong>作り変えの見積もりは全部ダメ：</strong>表の大きさ、補正の桁数、割り算の行数、乗算方式、qubit 45 本化を 6 つのセッションで分担して見積もりました。どれも誤差の上限を超えるかコストが増えました。Q46 版は今の形でほぼ釣り合っています。</li>
+      <li><strong>dqi と化学の解読：</strong>dqi は Toffoli の 87% が有限体の掛け算で、その 1 回のコストはすでに知られている最良に近い値でした。まれな失敗の処理、qubit 1 本減、次数落ちの扱いも、どれも割に合いませんでした。化学は、分解の形を変えて学習し直すしか余地がありません。</li>
+      <li><strong>順位：</strong>同じ公開物を多くのチームが取り込み、メダルの線が 1 日で約 1.7 上がりました。27.029 は 2,958 チーム中 337 位で、銅圏まであと 0.054 です。</li>
+      <li><strong>public refresh（夕方）：</strong>化学だけ、新しく公開された版が 0.21% 安かったので、手元で PASS を確かめて入れ替え、LBは<strong>27.04775</strong>に。その時点ではinvsqrtは自前の79,925を維持しました。</li>
+      <li><strong>公開物の更新でさらに上昇：</strong>dqiを同じ入力の20回比較で選び直してLB <strong>27.13484</strong>。夜にはAli Haydar Özdağの64行テーブル版をAtakanの公開物から取り込み、invsqrt 79,925 → <strong>78,765.50</strong>。Maoxinの化学も295,363,118.61へ更新し、確定LB <strong>27.28734</strong>になりました。</li>
+      <li><strong>別々の改良は足せるとは限らない：</strong>64行テーブル版と自前の割り算改良を組み合わせ、全入力×64回の検証は通りました。ただしコスト79,268.53で、公開版単体より悪化。ビルド時の概算より公式値が約574高く、採用しませんでした。</li>
+      <li><strong>Q46 版の残りの削りどころも見積もり：</strong>割り算の行を表引きや測定で置き換える案、補正の掛け算（約 490 Toffoli）の経路を変える案、位相を付ける回転（33 個、1 個あたり Toffoli 約 7.4 個分）を減らす案を調べました。割り算は 1 行あたり下限に近く、回転は必要な精度の bit 数で決まっていて、どれも得はありませんでした。70k 以下に届くには、平方根 + 割り算とは別の算法が要ります。</li>
+    </ul>
+  </article>
+
+  <article class="day">
+    <h3><time datetime="2026-11-12">11/12（木）</time></h3>
+    <ul>
+      <li><strong>public refresh（昼）：</strong>3 課題すべてを、公開されている中でいま一番良い回路に入れ替えて提出し、LB 25.227 → <strong>25.3957</strong>（217 位、銅圏ぎりぎり）。dqi は採点の抽選（draw）ごとに失敗数がぶれるので、32 回の抽選の平均で選ぶ方法を作りました。</li>
+      <li><strong>自前の invsqrt：</strong>194,222 → 184,894 → 178,249 → <strong>173,797</strong>（×10.7 → ×12.0）。LP 調整で Q 90（184,894）にした後、合成表引き（Q 84）を組み込んで 178,249、さらに後述の r-1 最適化で 173,797 を達成。複数 salt で検証し、すべて PASS。公開版との差は 1.86 倍まで縮まりました。</li>
+      <li><strong>表引きの合成と Rust 高速化：</strong>公開版と同じ「作業用 qubit なし」の表引きを自前で合成し、最初は 526 AND でしたが、足場を厚くする「thick 方式」で 383 AND まで圧縮。さらに合成器を Rust に移植して 9 分から 45 秒へと約 12 倍高速化し、シード探索が可能になりました。</li>
+      <li><strong>lastu による r-1 再最適化とボトルネック特定：</strong>Rust 合成した解の各出力ビットを fast.py (lastu) で再最適化し、56 出力中 48 出力で AND が 1 個ずつ削減（計 −48 AND、Toffoli 平均 1,718）。さらに Q=84 のピーク内訳を解析し、ボトルネックが early_hi（fresh 3本）と Horner 段0 加算器（キャリー 11本）にあることを特定、Q 84→83 化に着手しました。</li>
+      <li><strong>Q 83 の試作は不採用：</strong>二次の係数 c₂ を使い終わった直後に作業用 qubit なしの回路で 0 に戻し、Q 84 → <strong>83</strong> を達成しました（全入力で verifier PASS）。ただし、その消去に Toffoli が約 300 個かかり、score は 197,736 と最良の 173,797 より悪化しました。qubit 1 本の価値は Toffoli 約 24 個分なので、1 本減らすのに 300 個かけては割に合いません。最良は 173,797 のままです。</li>
+      <li><strong>公開版の解剖：</strong>公開版は係数レジスタをその場で計算値に書き換え、使い終わった係数は後で読み直していました。表引きが bit ごとの論理回路なので、必要な bit だけを安く読み直せるのが強みです。一方、公開版への局所的な書き換え（記号的な簡約、先に測る書き換え、シフタの SAT 再合成）は、どれも削れるゲートが 0 個でした。</li>
+      <li><strong>Discussion 全 96 件を確認：</strong>賞金にはジェネレータの提出が必要なこと、化学の回路は到達しうる入力でだけ正しければよいことなど、運営の回答を整理しました。化学はこの裁定を使っても余地は最大 1.8% 程度でした。</li>
+      <li><strong>public refresh（夜）：</strong>化学（dfthcsos）だけ heliosli の新しい版が 0.108% 安く、手元で PASS を確かめて入れ替え、再提出しました（ローカル期待 25.390、採点待ち）。invsqrt は更新された 12 本すべてが手元と同じでした。</li>
+    </ul>
+  </article>
+</section>
+</main>
+
+<script>
+(function(){
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  // 1) improvement bars
+  const runs = [
+    ["ベースライン", 2076774, 0],
+    ["表 + 二次式", 593053, 0],
+    ["自前の加算器", 359346, 0],
+    ["降順 cswap", 348258, 0],
+    ["lo_bits", 203033, 0],
+    ["early_hi", 198922, 0],
+    ["trim", 194222, 0],
+    ["Q 91（窓の足し算）", 190390, 0],
+    ["LP 角度", 184894, 0],
+    ["Q 84（thick 表引き）", 178249, 0],
+    ["Q 84（lastu 最適化）", 173797, 0],
+    ["旧公開版 Q 62（参考）", 93555, 1],
+    ["公開 Q46 版（参考）", 80163, 1],
+    ["Q46 + 割り算の細身化", 79925, 0],
+    ["公開64行テーブル版", 78765.50, 1],
+    ["回転角調整（未提出）", 78765.28, 2]
+  ];
+  const base = 2076774, W = 700, rowH = 30, left = 150, right = 120, maxR = 28;
+  const H = runs.length * rowH + 30;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:520px" role="img" aria-label="スコア改善倍率の棒グラフ">`;
+  const sx = r => left + (W - left - right) * r / maxR;
+  for (const t of [1,5,10,15,20]) {
+    s += `<line x1="${sx(t)}" x2="${sx(t)}" y1="4" y2="${H-24}" stroke="var(--line)"/>`;
+    s += `<text x="${sx(t)}" y="${H-6}" text-anchor="middle" font-size="11" class="mono" style="fill:var(--muted)">×${t}</text>`;
+  }
+  runs.forEach(([name, sc, kind], i) => {
+    const r = base / sc, y = 8 + i * rowH;
+    const col = kind === 1 ? "var(--pub)" : kind === 2 ? "var(--q)" : "color-mix(in srgb, var(--q) 55%, var(--paper))";
+    s += `<text x="${left-10}" y="${y+17}" text-anchor="end" font-size="13" ${kind===2?'font-weight="700"':''}>${name}</text>`;
+    s += `<rect x="${left}" y="${y+3}" width="${sx(r)-left}" height="20" rx="3" fill="${col}"/>`;
+    s += `<text x="${sx(r)+8}" y="${y+18}" font-size="12.5" class="mono">×${r.toFixed(1)}  <tspan style="fill:var(--muted)">${sc.toLocaleString()}</tspan></text>`;
+  });
+  s += `</svg>`;
+  document.getElementById("bars").innerHTML = s;
+
+  // 2) live qubit profile
+  const mine = [57,58,59,59,58,63,64,64,63,64,64,67,67,68,68,68,68,68,59,55,51,68,68,53,51,62,51,51,61,52,51,61,51,55,53,51,50,46,43,39,35,31,26,23,19,15,10,7,20,0];
+  const pub  = [19,40,40,40,40,40,40,40,40,39,36,40,40,40,36,36,36,32,34,38,36,37,36,36,36,33,32,36,37,36,40,40,37,32,24,24,24,24,24,24,24,24,24,24,21,18,17,18,16,0];
+  const W2 = 700, H2 = 260, L = 44, R = 14, T = 16, B = 34, yMax = 80;
+  const px = (i, n) => L + (W2 - L - R) * (i + 1) / n;
+  const py = v => T + (H2 - T - B) * (1 - v / yMax);
+  const path = arr => arr.map((v,i) => (i ? "L" : "M") + px(i, arr.length).toFixed(1) + " " + py(v).toFixed(1)).join(" ");
+  let g = `<svg viewBox="0 0 ${W2} ${H2}" width="100%" style="min-width:520px" role="img" aria-label="回路の位置ごとの使用中 qubit 数">`;
+  for (const v of [0,20,40,60,80]) {
+    g += `<line x1="${L}" x2="${W2-R}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line)"/>`;
+    g += `<text x="${L-8}" y="${py(v)+4}" text-anchor="end" font-size="11" class="mono" style="fill:var(--muted)">${v}</text>`;
+  }
+  // shade lookup region of mine (cuts 1..18)
+  g += `<rect x="${L}" y="${T}" width="${px(17,50)-L}" height="${H2-T-B}" fill="var(--tof-soft)" opacity=".7"/>`;
+  g += `<text x="${(L+px(17,50))/2}" y="${T+16}" text-anchor="middle" font-size="12" style="fill:var(--tof)" font-weight="600">自前：表引き（QROM）</text>`;
+  g += `<text x="${(px(18,50)+px(36,50))/2}" y="${T+16}" text-anchor="middle" font-size="12" style="fill:var(--muted)">多項式・位相</text>`;
+  g += `<text x="${(px(36,50)+W2-R)/2}" y="${T+16}" text-anchor="middle" font-size="12" style="fill:var(--muted)">逆計算</text>`;
+  g += `<path d="${path(pub)}" fill="none" stroke="var(--pub)" stroke-width="2.2"/>`;
+  g += `<path d="${path(mine)}" fill="none" stroke="var(--q)" stroke-width="2.6"/>`;
+  g += `<circle cx="${px(13,50)}" cy="${py(68)}" r="4.5" fill="var(--q)"/>`;
+  g += `<text x="${px(13,50)}" y="${py(68)-10}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--q)">ピーク 68</text>`;
+  g += `<text x="${px(2,50)+4}" y="${py(40)+18}" font-size="12" font-weight="600" style="fill:var(--pub)">公開版 40</text>`;
+  g += `<text x="${L}" y="${H2-8}" font-size="11" style="fill:var(--muted)">回路の先頭</text>`;
+  g += `<text x="${W2-R}" y="${H2-8}" text-anchor="end" font-size="11" style="fill:var(--muted)">末尾</text>`;
+  g += `</svg>`;
+  document.getElementById("live").innerHTML = g;
+})();
+</script>
+
+</body>
+</html>
